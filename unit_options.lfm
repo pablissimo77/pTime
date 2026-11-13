@@ -1,0 +1,398 @@
+object Form_options: TForm_options
+  Left = 834
+  Height = 558
+  Top = 196
+  Width = 325
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsToolWindow
+  Caption = 'pTime'
+  ClientHeight = 558
+  ClientWidth = 325
+  OnCreate = FormCreate
+  Position = poScreenCenter
+  LCLVersion = '3.6.0.0'
+  object PageControl1: TPageControl
+    Left = 0
+    Height = 558
+    Top = 0
+    Width = 325
+    ActivePage = TabSheet_Stat
+    Align = alClient
+    OnChanging = PageControl1Changing
+    OnChange = PageControl1Change
+    RaggedRight = True
+    Style = tsButtons
+    TabIndex = 2
+    TabOrder = 0
+    Options = [nboHidePageListPopup]
+    object TabSheet_Projects: TTabSheet
+      Caption = 'Projects'
+      ClientHeight = 528
+      ClientWidth = 315
+      object lb_Projects: TListBox
+        Left = 0
+        Height = 500
+        Top = 28
+        Width = 315
+        Align = alClient
+        ItemHeight = 0
+        MultiSelect = True
+        PopupMenu = PopupMenu_Projects
+        TabOrder = 0
+        TopIndex = -1
+        OnDblClick = lb_ProjectsDblClick
+      end
+      object NewProjectEdit: TEdit
+        Left = 0
+        Height = 28
+        Top = 0
+        Width = 315
+        Align = alTop
+        Color = clInfoBk
+        MaxLength = 50
+        TabOrder = 1
+        OnChange = NewProjectEditChange
+        OnKeyPress = NewProjectEditKeyPress
+      end
+    end
+    object TabSheet_Options: TTabSheet
+      Caption = 'Options'
+      ClientHeight = 528
+      ClientWidth = 315
+      object PanelExample: TPanel
+        Left = 0
+        Height = 60
+        Top = 0
+        Width = 315
+        Align = alTop
+        BevelOuter = bvNone
+        Caption = 'Some project'
+        TabOrder = 0
+      end
+      object btChangeColorBackground: TButton
+        Left = 0
+        Height = 25
+        Top = 60
+        Width = 315
+        Align = alTop
+        Caption = 'Change color background'
+        TabOrder = 1
+        OnClick = btChangeColorBackgroundClick
+      end
+      object btChangeFontColor: TButton
+        Left = 0
+        Height = 25
+        Top = 85
+        Width = 315
+        Align = alTop
+        Caption = 'Change font color'
+        TabOrder = 2
+        OnClick = btChangeFontColorClick
+      end
+      object btChangeFont: TButton
+        Left = 0
+        Height = 25
+        Top = 110
+        Width = 315
+        Align = alTop
+        Caption = 'Change font'
+        TabOrder = 3
+        OnClick = btChangeFontClick
+      end
+      object bt_SetDefault: TButton
+        Left = 0
+        Height = 25
+        Top = 268
+        Width = 315
+        Align = alTop
+        Caption = 'Set default Size and Position'
+        TabOrder = 4
+        OnClick = bt_SetDefaultClick
+      end
+      object Panel1: TPanel
+        Left = 0
+        Height = 54
+        Top = 135
+        Width = 315
+        Align = alTop
+        ClientHeight = 54
+        ClientWidth = 315
+        TabOrder = 5
+        object Label1: TLabel
+          Left = 8
+          Height = 16
+          Top = 4
+          Width = 63
+          Caption = 'Size Heght'
+        end
+        object edit_InfoHeight: TSpinEdit
+          Left = 4
+          Height = 28
+          Top = 20
+          Width = 98
+          AutoSelect = False
+          AutoSize = False
+          OnChange = edit_InfoHeightChange
+          TabOrder = 0
+          Value = 25
+        end
+        object Label2: TLabel
+          Left = 108
+          Height = 16
+          Top = 4
+          Width = 63
+          Caption = 'Size Width'
+        end
+        object edit_InfoWidth: TSpinEdit
+          Left = 104
+          Height = 28
+          Top = 20
+          Width = 98
+          OnChange = edit_InfoWidthChange
+          TabOrder = 1
+          Value = 302
+        end
+        object btTest: TButton
+          Left = 216
+          Height = 25
+          Top = 20
+          Width = 75
+          Caption = 'btTest'
+          TabOrder = 2
+          OnClick = btTestClick
+        end
+      end
+      object Panel2: TPanel
+        Left = 0
+        Height = 54
+        Top = 189
+        Width = 315
+        Align = alTop
+        ClientHeight = 54
+        ClientWidth = 315
+        TabOrder = 6
+        object Label3: TLabel
+          Left = 8
+          Height = 16
+          Top = 4
+          Width = 75
+          Caption = 'Position Top'
+        end
+        object edit_InfoTop: TSpinEdit
+          Left = 4
+          Height = 28
+          Top = 20
+          Width = 98
+          OnChange = edit_InfoTopChange
+          TabOrder = 0
+        end
+        object Label4: TLabel
+          Left = 108
+          Height = 16
+          Top = 4
+          Width = 76
+          Caption = 'Position Left'
+        end
+        object edit_InfoLeft: TSpinEdit
+          Left = 104
+          Height = 28
+          Top = 20
+          Width = 98
+          OnChange = edit_InfoLeftChange
+          TabOrder = 1
+        end
+      end
+      object bt_ApplySizePosition: TButton
+        Left = 0
+        Height = 25
+        Top = 243
+        Width = 315
+        Align = alTop
+        Caption = 'Apply Size and Position'
+        TabOrder = 7
+        OnClick = bt_ApplySizePositionClick
+      end
+    end
+    object TabSheet_Stat: TTabSheet
+      Caption = 'Stat'
+      ClientHeight = 528
+      ClientWidth = 315
+      object DateEdit1: TDateEdit
+        Left = 0
+        Height = 28
+        Top = 0
+        Width = 315
+        CalendarDisplaySettings = [dsShowHeadings, dsShowDayNames]
+        DefaultToday = True
+        DateOrder = doNone
+        DateFormat = 'yyyy.mm.dd'
+        ButtonWidth = 23
+        Align = alTop
+        NumGlyphs = 1
+        MaxLength = 0
+        TabOrder = 0
+        Text = 'DateEdit1'
+      end
+      object bt_ViewDayStat: TButton
+        Left = 0
+        Height = 25
+        Top = 28
+        Width = 315
+        Align = alTop
+        Caption = 'Day Statistics'
+        TabOrder = 1
+        OnClick = bt_ViewDayStatClick
+      end
+      object bt_ViewMonthStat: TButton
+        Left = 0
+        Height = 25
+        Top = 53
+        Width = 315
+        Align = alTop
+        Caption = 'Month Statistics'
+        TabOrder = 2
+        OnClick = bt_ViewMonthStatClick
+      end
+      object DBGrid1: TDBGrid
+        Left = 0
+        Height = 375
+        Top = 128
+        Width = 315
+        Align = alClient
+        AutoFillColumns = True
+        Color = clWindow
+        Columns = <>
+        DataSource = DataSource1
+        Options = [dgTitles, dgIndicator, dgColumnResize, dgColumnMove, dgColLines, dgRowLines, dgTabs, dgAlwaysShowSelection, dgConfirmDelete, dgCancelOnExit, dgDisplayMemoText]
+        ReadOnly = True
+        Scrollbars = ssVertical
+        TabOrder = 3
+        TitleStyle = tsStandard
+      end
+      object rg_OrderBy: TRadioGroup
+        Left = 0
+        Height = 50
+        Top = 78
+        Width = 315
+        Align = alTop
+        AutoFill = True
+        Caption = 'Order by:'
+        ChildSizing.LeftRightSpacing = 6
+        ChildSizing.EnlargeHorizontal = crsHomogenousChildResize
+        ChildSizing.EnlargeVertical = crsHomogenousChildResize
+        ChildSizing.ShrinkHorizontal = crsScaleChilds
+        ChildSizing.ShrinkVertical = crsScaleChilds
+        ChildSizing.Layout = cclLeftToRightThenTopToBottom
+        ChildSizing.ControlsPerLine = 2
+        ClientHeight = 33
+        ClientWidth = 313
+        Columns = 2
+        ItemIndex = 0
+        Items.Strings = (
+          'project'
+          'duration'
+        )
+        TabOrder = 4
+      end
+      object Button1: TButton
+        Left = 0
+        Height = 25
+        Top = 503
+        Width = 315
+        Align = alBottom
+        Caption = 'Copy to Clipboard'
+        TabOrder = 5
+        OnClick = Button1Click
+      end
+    end
+  end
+  object PopupMenu_Projects: TPopupMenu
+    Left = 44
+    Top = 452
+    object PopupMenu_Projects_Item_Start: TMenuItem
+      Tag = -1
+      Caption = 'Start'
+      OnClick = PopupMenu_Projects_Item_StartClick
+    end
+    object PopupMenu_Projects_Item_Delete: TMenuItem
+      Tag = -1
+      Caption = 'Delete'
+      OnClick = PopupMenu_Projects_Item_DeleteClick
+    end
+  end
+  object FontDialog: TFontDialog
+    MinFontSize = 0
+    MaxFontSize = 0
+    Left = 156
+    Top = 432
+  end
+  object ColorDialogBackground: TColorDialog
+    Color = clBlack
+    CustomColors.Strings = (
+      'ColorA=000000'
+      'ColorB=000080'
+      'ColorC=008000'
+      'ColorD=008080'
+      'ColorE=800000'
+      'ColorF=800080'
+      'ColorG=808000'
+      'ColorH=808080'
+      'ColorI=C0C0C0'
+      'ColorJ=0000FF'
+      'ColorK=00FF00'
+      'ColorL=00FFFF'
+      'ColorM=FF0000'
+      'ColorN=FF00FF'
+      'ColorO=FFFF00'
+      'ColorP=FFFFFF'
+      'ColorQ=C0DCC0'
+      'ColorR=F0CAA6'
+      'ColorS=F0FBFF'
+      'ColorT=A4A0A0'
+    )
+    Left = 112
+    Top = 444
+  end
+  object ColorDialogFont: TColorDialog
+    Color = clBlack
+    CustomColors.Strings = (
+      'ColorA=000000'
+      'ColorB=000080'
+      'ColorC=008000'
+      'ColorD=008080'
+      'ColorE=800000'
+      'ColorF=800080'
+      'ColorG=808000'
+      'ColorH=808080'
+      'ColorI=C0C0C0'
+      'ColorJ=0000FF'
+      'ColorK=00FF00'
+      'ColorL=00FFFF'
+      'ColorM=FF0000'
+      'ColorN=FF00FF'
+      'ColorO=FFFF00'
+      'ColorP=FFFFFF'
+      'ColorQ=C0DCC0'
+      'ColorR=F0CAA6'
+      'ColorS=F0FBFF'
+      'ColorT=A4A0A0'
+    )
+    Left = 28
+    Top = 416
+  end
+  object SQLQuery_stat: TSQLQuery
+    FieldDefs = <>
+    Database = Form_info.SQLite3Connection
+    Transaction = Form_info.SQLTransaction
+    Params = <>
+    Macros = <>
+    Left = 24
+    Top = 300
+  end
+  object DataSource1: TDataSource
+    AutoEdit = False
+    DataSet = SQLQuery_stat
+    Left = 80
+    Top = 300
+  end
+end

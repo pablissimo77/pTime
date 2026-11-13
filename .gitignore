@@ -1,0 +1,23 @@
+# Lazarus/FPC build output
+/ptime
+/ptime.dbg
+/lib/
+/*.ppu
+/*.o
+/*.or
+/*.compiled
+
+# IDE-local state and temporary files
+/*.lps
+/backup/
+
+# Local application data and legacy migration backups
+/ptime.sqlite3
+/ptime.sqlite3.pre-migration.bak
+/option.migrated
+/projects.migrated
+/option
+/projects
+
+# Obsolete release package
+/release/

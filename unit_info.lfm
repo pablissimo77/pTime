@@ -1,0 +1,66 @@
+object Form_info: TForm_info
+  Left = 711
+  Height = 38
+  Top = 308
+  Width = 516
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsNone
+  ClientHeight = 38
+  ClientWidth = 516
+  DefaultMonitor = dmDesktop
+  FormStyle = fsSystemStayOnTop
+  OnClose = FormClose
+  OnCreate = FormCreate
+  OnMouseDown = FormMouseDown
+  OnMouseMove = FormMouseMove
+  OnMouseUp = FormMouseUp
+  OnShow = FormShow
+  ShowInTaskBar = stNever
+  LCLVersion = '3.6.0.0'
+  object InformPanel: TPanel
+    Left = 0
+    Height = 38
+    Top = 0
+    Width = 516
+    Align = alClient
+    BevelOuter = bvNone
+    PopupMenu = PopupMenu_info
+    TabOrder = 0
+    OnMouseDown = FormMouseDown
+    OnMouseMove = FormMouseMove
+    OnMouseUp = FormMouseUp
+  end
+  object PopupMenu_info: TPopupMenu
+    Left = 68
+    Top = 4
+  end
+  object Timer1000: TTimer
+    OnTimer = Timer1000Timer
+    Left = 8
+    Top = 4
+  end
+  object SQLite3Connection: TSQLite3Connection
+    Connected = False
+    LoginPrompt = False
+    KeepConnection = True
+    Transaction = SQLTransaction
+    AlwaysUseBigint = False
+    Left = 152
+    Top = 4
+  end
+  object SQLQuery1: TSQLQuery
+    FieldDefs = <>
+    Database = SQLite3Connection
+    Transaction = SQLTransaction
+    Params = <>
+    Macros = <>
+    Left = 200
+    Top = 4
+  end
+  object SQLTransaction: TSQLTransaction
+    Active = False
+    Database = SQLite3Connection
+    Left = 232
+    Top = 4
+  end
+end
