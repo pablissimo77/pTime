@@ -14,6 +14,7 @@
 # Local application data and legacy migration backups
 /ptime.sqlite3
 /ptime.sqlite3.pre-migration.bak
+/ptime.lock
 /option.migrated
 /projects.migrated
 /option
@@ -21,6 +22,9 @@
 
 # Obsolete release package
 /release/
+
+# Locally generated release packages
+/dist/
 # Uncomment these types if you want even more clean repository. But be careful.
 # It can make harm to an existing project source. Read explanations below.
 #

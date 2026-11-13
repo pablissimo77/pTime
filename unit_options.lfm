@@ -233,46 +233,58 @@ object Form_options: TForm_options
         TabOrder = 0
         Text = 'DateEdit1'
       end
-      object bt_ViewDayStat: TButton
+      object cb_StatProject: TComboBox
         Left = 0
-        Height = 25
+        Height = 28
         Top = 28
         Width = 315
         Align = alTop
-        Caption = 'Day Statistics'
+        Style = csDropDownList
+        ItemHeight = 0
         TabOrder = 1
+      end
+      object bt_ViewDayStat: TButton
+        Left = 0
+        Height = 25
+        Top = 56
+        Width = 315
+        Align = alTop
+        Caption = 'Day Statistics'
+        TabOrder = 2
         OnClick = bt_ViewDayStatClick
       end
       object bt_ViewMonthStat: TButton
         Left = 0
         Height = 25
-        Top = 53
+        Top = 81
         Width = 315
         Align = alTop
         Caption = 'Month Statistics'
-        TabOrder = 2
+        TabOrder = 3
         OnClick = bt_ViewMonthStatClick
       end
-      object DBGrid1: TDBGrid
+      object ReportGrid: TStringGrid
         Left = 0
-        Height = 375
-        Top = 128
+        Height = 347
+        Top = 156
         Width = 315
         Align = alClient
-        AutoFillColumns = True
+        ColCount = 3
         Color = clWindow
-        Columns = <>
-        DataSource = DataSource1
-        Options = [dgTitles, dgIndicator, dgColumnResize, dgColumnMove, dgColLines, dgRowLines, dgTabs, dgAlwaysShowSelection, dgConfirmDelete, dgCancelOnExit, dgDisplayMemoText]
-        ReadOnly = True
-        Scrollbars = ssVertical
-        TabOrder = 3
-        TitleStyle = tsStandard
+        DefaultColWidth = 120
+        DefaultRowHeight = 25
+        FixedCols = 0
+        FixedRows = 1
+        GridLineColor = clSilver
+        Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect, goThumbTracking]
+        RowCount = 1
+        TabOrder = 5
+        OnKeyDown = ReportGridKeyDown
       end
       object rg_OrderBy: TRadioGroup
         Left = 0
         Height = 50
-        Top = 78
+        Top = 106
         Width = 315
         Align = alTop
         AutoFill = True
@@ -301,7 +313,7 @@ object Form_options: TForm_options
         Width = 315
         Align = alBottom
         Caption = 'Copy to Clipboard'
-        TabOrder = 5
+        TabOrder = 6
         OnClick = Button1Click
       end
     end
@@ -379,20 +391,5 @@ object Form_options: TForm_options
     )
     Left = 28
     Top = 416
-  end
-  object SQLQuery_stat: TSQLQuery
-    FieldDefs = <>
-    Database = Form_info.SQLite3Connection
-    Transaction = Form_info.SQLTransaction
-    Params = <>
-    Macros = <>
-    Left = 24
-    Top = 300
-  end
-  object DataSource1: TDataSource
-    AutoEdit = False
-    DataSet = SQLQuery_stat
-    Left = 80
-    Top = 300
   end
 end

@@ -39,28 +39,4 @@ object Form_info: TForm_info
     Left = 8
     Top = 4
   end
-  object SQLite3Connection: TSQLite3Connection
-    Connected = False
-    LoginPrompt = False
-    KeepConnection = True
-    Transaction = SQLTransaction
-    AlwaysUseBigint = False
-    Left = 152
-    Top = 4
-  end
-  object SQLQuery1: TSQLQuery
-    FieldDefs = <>
-    Database = SQLite3Connection
-    Transaction = SQLTransaction
-    Params = <>
-    Macros = <>
-    Left = 200
-    Top = 4
-  end
-  object SQLTransaction: TSQLTransaction
-    Active = False
-    Database = SQLite3Connection
-    Left = 232
-    Top = 4
-  end
 end

@@ -6,8 +6,8 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ComCtrls,
-  Spin, Menus, ExtCtrls, EditBtn, DBGrids, Clipbrd, DateUtils, SQLDB, DB,
-  FileUtil;
+  Spin, Menus, ExtCtrls, EditBtn, Grids, Clipbrd, DateUtils, SQLDB,
+  unit_database;
 
 type
 
@@ -23,11 +23,11 @@ type
     bt_ViewDayStat: TButton;
     bt_ViewMonthStat: TButton;
     Button1: TButton;
+    cb_StatProject: TComboBox;
     ColorDialogFont: TColorDialog;
     ColorDialogBackground: TColorDialog;
-    DataSource1: TDataSource;
     DateEdit1: TDateEdit;
-    DBGrid1: TDBGrid;
+    ReportGrid: TStringGrid;
     edit_InfoHeight: TSpinEdit;
     edit_InfoLeft: TSpinEdit;
     edit_InfoTop: TSpinEdit;
@@ -47,7 +47,6 @@ type
     lb_Projects: TListBox;
     PageControl1: TPageControl;
     rg_OrderBy: TRadioGroup;
-    SQLQuery_stat: TSQLQuery;
     TabSheet_Projects: TTabSheet;
     TabSheet_Options: TTabSheet;
     TabSheet_Stat: TTabSheet;
@@ -74,11 +73,14 @@ type
     procedure lb_ProjectsDblClick(Sender: TObject);
     procedure PageControl1Changing(Sender: TObject; var AllowChange: Boolean);
     procedure PageControl1Change(Sender: TObject);
+    procedure ReportGridKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
     procedure PopupMenu_Projects_Item_DeleteClick(Sender: TObject);
     procedure PopupMenu_Projects_Item_StartClick(Sender: TObject);
   private
     procedure LoadDayStatistics;
-    procedure LoadDayStatisticsAsync(Data: PtrInt);
+    procedure LoadStatisticsToGrid;
+    function SelectedStatisticsProject: string;
 
   public
     function NewProjectExists(NewProjectName: string): boolean;
@@ -191,27 +193,6 @@ end;
 
 procedure TForm_options.btTestClick(Sender: TObject);
 begin
-
-  //SQLite3Connection1.Password := txtPass.Text; // The current password
-
-  //// Try to perform query
-  //try
-  //  SQLite3Connection1.Connected := True;
-
-  //  // Set SQL text to select everything from the DATA table
-  //  SQLQuery1.SQL.Clear;
-  //  SQLQuery1.SQL.Text := 'Select * from DATA';
-  //  SQLQuery1.Open;
-
-  //  // Allow the DBGrid to view the results of our query
-  //  DataSource1.DataSet := SQLQuery1;
-  //  DBGrid1.DataSource := DataSource1;
-  //  DBGrid1.AutoFillColumns := true;
-
-  //except
-  //  ShowMessage('Unable to query the database');
-  //end;
-
 end;
 
 procedure TForm_options.bt_ApplySizePositionClick(Sender: TObject);
@@ -233,25 +214,21 @@ begin
   LoadDayStatistics;
 end;
 
+function TForm_options.SelectedStatisticsProject: string;
+begin
+  if (cb_StatProject.ItemIndex <= 0) or
+    (cb_StatProject.ItemIndex >= cb_StatProject.Items.Count) then
+    Result := ''
+  else
+    Result := cb_StatProject.Items[cb_StatProject.ItemIndex];
+end;
+
 procedure TForm_options.LoadDayStatistics;
 begin
   try
-    if SQLQuery_stat.Active then
-      SQLQuery_stat.Close;
-
-    if rg_OrderBy.ItemIndex = 0 then
-      SQLQuery_stat.SQL.Text :=
-        'Select project as Project, sum(duration) as Duration from timing group by project having day=:day order by project'
-    else
-      SQLQuery_stat.SQL.Text :=
-        'Select project as Project, sum(duration) as Duration from timing group by project having day=:day order by Duration desc';
-
-    SQLQuery_stat.Params.ParamByName('day').AsString := DateEdit1.Text;
-    SQLQuery_stat.Open;
-    SQLQuery_stat.Refresh;
-
-    DataSource1.DataSet := SQLQuery_stat;
-    DBGrid1.DataSource := DataSource1;
+    AppDatabase.OpenDayStatistics(DateEdit1.Text, SelectedStatisticsProject,
+      rg_OrderBy.ItemIndex <> 0);
+    LoadStatisticsToGrid;
 
   except
     ShowMessage('Unable to query the database');
@@ -263,61 +240,86 @@ var
   YearMonth: string;
 begin
   try
-    if SQLQuery_stat.Active then
-      SQLQuery_stat.Close;
     YearMonth := FormatDateTime('yyyy.mm', DateEdit1.Date);
-    if rg_OrderBy.ItemIndex = 0 then
-      SQLQuery_stat.SQL.Text :=
-        'select project as Project, sum(duration) as Duration ' +
-        'from timing where SUBSTR(day,1,7)=:year_month ' +
-        'group by project order by project'
-    else
-      SQLQuery_stat.SQL.Text :=
-        'select project as Project, sum(duration) as Duration ' +
-        'from timing where SUBSTR(day,1,7)=:year_month ' +
-        'group by project order by Duration desc';
-
-    SQLQuery_stat.Params.ParamByName('year_month').AsString := YearMonth;
-    SQLQuery_stat.Open;
-    SQLQuery_stat.Refresh;
-
-    DataSource1.DataSet := SQLQuery_stat;
-    DBGrid1.DataSource := DataSource1;
+    AppDatabase.OpenMonthStatistics(YearMonth, SelectedStatisticsProject,
+      rg_OrderBy.ItemIndex <> 0);
+    LoadStatisticsToGrid;
 
   except
     ShowMessage('Unable to query the database');
   end;
 end;
 
+function FormatDuration(TotalSeconds: Integer): string; forward;
+
+procedure TForm_options.LoadStatisticsToGrid;
+var
+  Query: TSQLQuery;
+  Row: Integer;
+begin
+  Query := AppDatabase.StatisticsQuery;
+  ReportGrid.RowCount := 1;
+  ReportGrid.ColCount := 3;
+  ReportGrid.Cells[0, 0] := 'Period';
+  ReportGrid.Cells[1, 0] := 'Project';
+  ReportGrid.Cells[2, 0] := 'Duration';
+  Row := 1;
+  while not Query.EOF do
+  begin
+    ReportGrid.RowCount := Row + 1;
+    ReportGrid.Cells[0, Row] := Query.FieldByName('Period').AsString;
+    ReportGrid.Cells[1, Row] := Query.FieldByName('Project').AsString;
+    ReportGrid.Cells[2, Row] :=
+      FormatDuration(Query.FieldByName('Duration').AsInteger);
+    Inc(Row);
+    Query.Next;
+  end;
+  ReportGrid.ColWidths[0] := 90;
+  ReportGrid.ColWidths[2] := 90;
+  ReportGrid.ColWidths[1] := ReportGrid.ClientWidth -
+    ReportGrid.ColWidths[0] - ReportGrid.ColWidths[2];
+end;
+
+function FormatDuration(TotalSeconds: Integer): string;
+var
+  Hours, Minutes, Seconds: Integer;
+begin
+  Hours := TotalSeconds div 3600;
+  Minutes := (TotalSeconds mod 3600) div 60;
+  Seconds := TotalSeconds mod 60;
+  Result := Format('%.2d:%.2d:%.2d', [Hours, Minutes, Seconds]);
+end;
+
 procedure TForm_options.Button1Click(Sender: TObject);
 var
-  sl: TStringList;
-  iCol: integer;
-  s, Delim: string;
+  Lines: TStringList;
+  Row, Col: Integer;
+  Line: string;
 begin
-  sl := TStringList.Create;
-  Delim := CHR(9);
-
-  s := '';
-  for iCol := 0 to DBGrid1.Columns.Count - 1 do
-     S := S + DBGrid1.Columns[iCol].FieldName + Delim;
-  sl.Append(s.Trim());
-
-  DBGrid1.DataSource.DataSet.First;
-
-  while not DBGrid1.DataSource.DataSet.EOF do
-  begin
-    s := '';
-    for iCol := 0 to DBGrid1.Columns.Count - 1 do
+  Lines := TStringList.Create;
+  try
+    for Row := 0 to ReportGrid.RowCount - 1 do
     begin
-      S := S + DBGrid1.Columns[iCol].Field.AsString + Delim;
+      Line := '';
+      for Col := 0 to ReportGrid.ColCount - 1 do
+      begin
+        if Col > 0 then
+          Line := Line + #9;
+        Line := Line + ReportGrid.Cells[Col, Row];
+      end;
+      Lines.Add(Line);
     end;
-    sl.Append(s.Trim());
-    DBGrid1.DataSource.DataSet.Next();
+    Clipboard.AsText := Lines.Text;
+  finally
+    Lines.Free;
   end;
-  Clipboard.AsText := sl.Text;
-  sl.Free;
-  DBGrid1.DataSource.DataSet.First;
+end;
+
+procedure TForm_options.ReportGridKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  if (Key = Ord('C')) and (ssCtrl in Shift) then
+    Button1Click(Sender);
 end;
 
 
@@ -332,19 +334,9 @@ begin
     begin
       if not (NewProjectExists(NewProjectEdit.Text)) then
       begin
-        Form_info.SQLQuery1.Close;
-        Form_info.SQLTransaction.Active := True;
-        Form_info.SQLQuery1.SQL.Text :=
-          'INSERT INTO projects (name, sort_order) ' +
-          'VALUES (:name, :sort_order)';
-        Form_info.SQLQuery1.Params.ParamByName('name').AsString :=
-          NewProjectEdit.Text;
-        Form_info.SQLQuery1.Params.ParamByName('sort_order').AsInteger :=
-          lb_Projects.Items.Count;
-        Form_info.SQLQuery1.ExecSQL;
-        Form_info.SQLTransaction.Commit;
-        lb_Projects.Items.Add(NewProjectEdit.Text);
-        lb_Projects.ItemIndex := lb_Projects.Items.Count - 1;
+        AppDatabase.AddProject(NewProjectEdit.Text, lb_Projects.Items.Count);
+        LoadProjectsList;
+        lb_Projects.ItemIndex := lb_Projects.Items.IndexOf(NewProjectEdit.Text);
         NewProjectEdit.Text := '';
         Form_info.CreatePopMenu;
       end
@@ -374,13 +366,8 @@ begin
   if lb_Projects.ItemIndex < 0 then
     Exit;
   ProjectName := lb_Projects.Items[lb_Projects.ItemIndex];
-  Form_info.SQLQuery1.Close;
-  Form_info.SQLTransaction.Active := True;
-  Form_info.SQLQuery1.SQL.Text := 'DELETE FROM projects WHERE name=:name';
-  Form_info.SQLQuery1.Params.ParamByName('name').AsString := ProjectName;
-  Form_info.SQLQuery1.ExecSQL;
-  Form_info.SQLTransaction.Commit;
-  lb_Projects.DeleteSelected;
+  AppDatabase.DeleteProject(ProjectName);
+  LoadProjectsList;
   Form_info.CreatePopMenu;
 end;
 
@@ -399,22 +386,17 @@ begin
   ;
 end;
 
-procedure TForm_options.PageControl1Changing(Sender: TObject;
-  var AllowChange: Boolean);
-begin
-  Form_options.ActiveControl := nil;
-end;
-
 procedure TForm_options.PageControl1Change(Sender: TObject);
 begin
   if Visible and (PageControl1.ActivePage = TabSheet_Stat) then
-    Application.QueueAsyncCall(@LoadDayStatisticsAsync, 0);
+    LoadDayStatistics;
 end;
 
-procedure TForm_options.LoadDayStatisticsAsync(Data: PtrInt);
+procedure TForm_options.PageControl1Changing(Sender: TObject;
+  var AllowChange: Boolean);
 begin
-  if Visible and (PageControl1.ActivePage = TabSheet_Stat) then
-    LoadDayStatistics;
+  if Visible and PageControl1.CanFocus then
+    PageControl1.SetFocus;
 end;
 
 function TForm_options.NewProjectExists(NewProjectName: string): boolean;
@@ -431,62 +413,49 @@ end;
 
 
 procedure TForm_options.SaveOptions;
+var
+  Settings: TAppSettings;
 begin
   try
-    Form_info.SQLQuery1.Close;
-    Form_info.SQLTransaction.Active := True;
-    Form_info.SQLQuery1.SQL.Text :=
-      'UPDATE settings SET font_name=:font_name, font_size=:font_size, ' +
-      'font_color=:font_color, font_bold=:font_bold, font_italic=:font_italic, ' +
-      'background_color=:background_color, info_width=:info_width, ' +
-      'info_height=:info_height, info_top=:info_top, info_left=:info_left ' +
-      'WHERE id=1';
-    Form_info.SQLQuery1.Params.ParamByName('font_name').AsString := PanelExample.Font.Name;
-    Form_info.SQLQuery1.Params.ParamByName('font_size').AsInteger := PanelExample.Font.Size;
-    Form_info.SQLQuery1.Params.ParamByName('font_color').AsInteger := PanelExample.Font.Color;
-    Form_info.SQLQuery1.Params.ParamByName('font_bold').AsInteger := Ord(fsBold in PanelExample.Font.Style);
-    Form_info.SQLQuery1.Params.ParamByName('font_italic').AsInteger := Ord(fsItalic in PanelExample.Font.Style);
-    Form_info.SQLQuery1.Params.ParamByName('background_color').AsInteger := PanelExample.Color;
-    Form_info.SQLQuery1.Params.ParamByName('info_width').AsInteger := edit_InfoWidth.Value;
-    Form_info.SQLQuery1.Params.ParamByName('info_height').AsInteger := edit_InfoHeight.Value;
-    Form_info.SQLQuery1.Params.ParamByName('info_top').AsInteger := edit_InfoTop.Value;
-    Form_info.SQLQuery1.Params.ParamByName('info_left').AsInteger := edit_InfoLeft.Value;
-    Form_info.SQLQuery1.ExecSQL;
-    Form_info.SQLTransaction.Commit;
+    Settings.FontName := PanelExample.Font.Name;
+    Settings.FontSize := PanelExample.Font.Size;
+    Settings.FontColor := PanelExample.Font.Color;
+    Settings.FontBold := fsBold in PanelExample.Font.Style;
+    Settings.FontItalic := fsItalic in PanelExample.Font.Style;
+    Settings.BackgroundColor := PanelExample.Color;
+    Settings.InfoWidth := edit_InfoWidth.Value;
+    Settings.InfoHeight := edit_InfoHeight.Value;
+    Settings.InfoTop := edit_InfoTop.Value;
+    Settings.InfoLeft := edit_InfoLeft.Value;
+    AppDatabase.SaveSettings(Settings);
   except
-    if Form_info.SQLTransaction.Active then
-      Form_info.SQLTransaction.Rollback;
+    { Keep the previous behavior: settings errors do not terminate the app. }
   end;
 end;
 
 procedure TForm_options.LoadOptions;
+var
+  Settings: TAppSettings;
 begin
   try
-    Form_info.SQLQuery1.Close;
-    Form_info.SQLQuery1.SQL.Text :=
-      'SELECT font_name, font_size, font_color, font_bold, font_italic, ' +
-      'background_color, info_width, info_height, info_top, info_left ' +
-      'FROM settings WHERE id=1';
-    Form_info.SQLQuery1.Open;
-    if not Form_info.SQLQuery1.EOF then
+    if AppDatabase.LoadSettings(Settings) then
     begin
-      PanelExample.Font.Name := Form_info.SQLQuery1.FieldByName('font_name').AsString;
-      PanelExample.Font.Size := Form_info.SQLQuery1.FieldByName('font_size').AsInteger;
-      PanelExample.Font.Color := Form_info.SQLQuery1.FieldByName('font_color').AsInteger;
+      PanelExample.Font.Name := Settings.FontName;
+      PanelExample.Font.Size := Settings.FontSize;
+      PanelExample.Font.Color := Settings.FontColor;
       PanelExample.Font.Style := [];
-      if Form_info.SQLQuery1.FieldByName('font_bold').AsInteger <> 0 then
+      if Settings.FontBold then
         PanelExample.Font.Style := PanelExample.Font.Style + [fsBold];
-      if Form_info.SQLQuery1.FieldByName('font_italic').AsInteger <> 0 then
+      if Settings.FontItalic then
         PanelExample.Font.Style := PanelExample.Font.Style + [fsItalic];
-      PanelExample.Color := Form_info.SQLQuery1.FieldByName('background_color').AsInteger;
-      edit_InfoWidth.Value := Form_info.SQLQuery1.FieldByName('info_width').AsInteger;
-      edit_InfoHeight.Value := Form_info.SQLQuery1.FieldByName('info_height').AsInteger;
-      edit_InfoTop.Value := Form_info.SQLQuery1.FieldByName('info_top').AsInteger;
-      edit_InfoLeft.Value := Form_info.SQLQuery1.FieldByName('info_left').AsInteger;
+      PanelExample.Color := Settings.BackgroundColor;
+      edit_InfoWidth.Value := Settings.InfoWidth;
+      edit_InfoHeight.Value := Settings.InfoHeight;
+      edit_InfoTop.Value := Settings.InfoTop;
+      edit_InfoLeft.Value := Settings.InfoLeft;
     end;
-    Form_info.SQLQuery1.Close;
   except
-    Form_info.SQLQuery1.Close;
+    { Keep the previous behavior: defaults remain in the controls. }
   end;
 end;
 
@@ -494,20 +463,21 @@ procedure TForm_options.LoadProjectsList;
 begin
   try
     lb_Projects.Items.Clear;
-    Form_info.SQLQuery1.Close;
-    Form_info.SQLQuery1.SQL.Text :=
-      'SELECT name FROM projects ORDER BY sort_order, id';
-    Form_info.SQLQuery1.Open;
-    while not Form_info.SQLQuery1.EOF do
-    begin
-      lb_Projects.Items.Add(Form_info.SQLQuery1.FieldByName('name').AsString);
-      Form_info.SQLQuery1.Next;
-    end
-    ;
-    Form_info.SQLQuery1.Close;
+    AppDatabase.LoadProjects(lb_Projects.Items);
+    cb_StatProject.Items.BeginUpdate;
+    try
+      cb_StatProject.Items.Clear;
+      cb_StatProject.Items.Add('All projects');
+      cb_StatProject.Items.AddStrings(lb_Projects.Items);
+      cb_StatProject.ItemIndex := 0;
+    finally
+      cb_StatProject.Items.EndUpdate;
+    end;
   except
-    Form_info.SQLQuery1.Close;
     lb_Projects.Items.Clear;
+    cb_StatProject.Items.Clear;
+    cb_StatProject.Items.Add('All projects');
+    cb_StatProject.ItemIndex := 0;
   end;
 end;
 

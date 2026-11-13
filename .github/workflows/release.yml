@@ -1,0 +1,106 @@
+name: Build and publish release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    name: Build Linux x86_64 packages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Lazarus and packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lazarus imagemagick curl zsync
+
+      - name: Build Linux binary
+        run: |
+          chmod +x scripts/generate-version.sh
+          VERSION="$(scripts/generate-version.sh ptime.lpi)"
+          test "${VERSION}" = "${GITHUB_REF_NAME#v}" || {
+            echo "Git tag version does not match ptime.lpi version: ${VERSION}" >&2
+            exit 1
+          }
+          lazbuild --build-mode=Release --os=linux --cpu=x86_64 ptime.lpi
+
+      - name: Build Linux packages
+        run: |
+          chmod +x scripts/package-linux.sh
+          scripts/package-linux.sh "${GITHUB_REF_NAME#v}"
+
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages
+          path: dist/pTime-*
+
+  build-windows:
+    name: Build Windows x64 package
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Lazarus
+        shell: powershell
+        run: choco install lazarus --no-progress -y
+
+      - name: Build Windows binary
+        shell: powershell
+        run: |
+          $Version = & .\scripts\generate-version.ps1 -ProjectFile ptime.lpi
+          if ($Version -ne $env:GITHUB_REF_NAME.Substring(1)) {
+            throw "Git tag version does not match ptime.lpi version: $Version"
+          }
+          & "C:\\lazarus\\lazbuild.exe" --build-mode=Release ptime.lpi
+
+      - name: Build Windows package
+        shell: powershell
+        run: .\scripts\package-windows.ps1 -Version $env:GITHUB_REF_NAME.Substring(1)
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-package
+          path: dist/pTime-*
+
+  release:
+    name: Create GitHub Release
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+
+      - name: Download Linux packages
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-packages
+          path: dist
+
+      - name: Download Windows package
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-package
+          path: dist
+
+      - name: Generate SHA-256 checksums
+        working-directory: dist
+        run: sha256sum pTime-* > SHA256SUMS.txt
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "pTime $GITHUB_REF_NAME" \
+            --notes-file "release-notes/${GITHUB_REF_NAME}.md"

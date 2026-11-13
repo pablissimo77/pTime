@@ -15,6 +15,7 @@ type
     Copyright: TLabel;
     OKButton: TButton;
     Label_Mail: TLabel;
+    procedure FormCreate(Sender: TObject);
     procedure Label_MailClick(Sender: TObject);
     procedure Label_MailMouseEnter(Sender: TObject);
   private
@@ -29,6 +30,12 @@ var
 implementation
 
 {$R *.lfm}
+{$I version.inc}
+
+procedure TForm_about.FormCreate(Sender: TObject);
+begin
+  ProductName.Caption := 'pTime ' + PTIME_VERSION;
+end;
 
 procedure TForm_about.Label_MailClick(Sender: TObject);
 var
