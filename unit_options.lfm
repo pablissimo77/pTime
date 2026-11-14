@@ -8,39 +8,41 @@ object Form_options: TForm_options
   Caption = 'pTime'
   ClientHeight = 558
   ClientWidth = 325
-  OnCreate = FormCreate
   Position = poScreenCenter
-  LCLVersion = '3.6.0.0'
+  LCLVersion = '4.6.0.0'
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
   object PageControl1: TPageControl
     Left = 0
     Height = 558
     Top = 0
     Width = 325
-    ActivePage = TabSheet_Stat
+    ActivePage = TabSheet_Projects
     Align = alClient
-    OnChanging = PageControl1Changing
-    OnChange = PageControl1Change
-    RaggedRight = True
-    Style = tsButtons
-    TabIndex = 2
-    TabOrder = 0
     Options = [nboHidePageListPopup]
+    RaggedRight = True
+    TabIndex = 0
+    TabOrder = 0
+    OnChange = PageControl1Change
+    OnChanging = PageControl1Changing
     object TabSheet_Projects: TTabSheet
       Caption = 'Projects'
       ClientHeight = 528
       ClientWidth = 315
       object lb_Projects: TListBox
         Left = 0
-        Height = 500
-        Top = 28
+        Height = 477
+        Top = 51
         Width = 315
         Align = alClient
-        ItemHeight = 0
+        ItemHeight = 22
         MultiSelect = True
         PopupMenu = PopupMenu_Projects
+        Style = lbOwnerDrawFixed
         TabOrder = 0
         TopIndex = -1
         OnDblClick = lb_ProjectsDblClick
+        OnDrawItem = lb_ProjectsDrawItem
       end
       object NewProjectEdit: TEdit
         Left = 0
@@ -53,6 +55,18 @@ object Form_options: TForm_options
         TabOrder = 1
         OnChange = NewProjectEditChange
         OnKeyPress = NewProjectEditKeyPress
+      end
+      object cb_ProjectsActiveOnly: TCheckBox
+        Left = 0
+        Height = 23
+        Top = 28
+        Width = 315
+        Align = alTop
+        Caption = 'Show active projects only'
+        Checked = True
+        State = cbChecked
+        TabOrder = 2
+        OnChange = cb_ProjectsActiveOnlyChange
       end
     end
     object TabSheet_Options: TTabSheet
@@ -132,9 +146,9 @@ object Form_options: TForm_options
           Width = 98
           AutoSelect = False
           AutoSize = False
-          OnChange = edit_InfoHeightChange
           TabOrder = 0
           Value = 25
+          OnChange = edit_InfoHeightChange
         end
         object Label2: TLabel
           Left = 108
@@ -148,18 +162,9 @@ object Form_options: TForm_options
           Height = 28
           Top = 20
           Width = 98
-          OnChange = edit_InfoWidthChange
           TabOrder = 1
           Value = 302
-        end
-        object btTest: TButton
-          Left = 216
-          Height = 25
-          Top = 20
-          Width = 75
-          Caption = 'btTest'
-          TabOrder = 2
-          OnClick = btTestClick
+          OnChange = edit_InfoWidthChange
         end
       end
       object Panel2: TPanel
@@ -183,8 +188,8 @@ object Form_options: TForm_options
           Height = 28
           Top = 20
           Width = 98
-          OnChange = edit_InfoTopChange
           TabOrder = 0
+          OnChange = edit_InfoTopChange
         end
         object Label4: TLabel
           Left = 108
@@ -198,8 +203,8 @@ object Form_options: TForm_options
           Height = 28
           Top = 20
           Width = 98
-          OnChange = edit_InfoLeftChange
           TabOrder = 1
+          OnChange = edit_InfoLeftChange
         end
       end
       object bt_ApplySizePosition: TButton
@@ -235,56 +240,63 @@ object Form_options: TForm_options
       end
       object cb_StatProject: TComboBox
         Left = 0
-        Height = 28
+        Height = 30
         Top = 28
         Width = 315
         Align = alTop
-        Style = csDropDownList
         ItemHeight = 0
+        Style = csDropDownList
         TabOrder = 1
       end
-      object bt_ViewDayStat: TButton
+      object cb_StatActiveOnly: TCheckBox
         Left = 0
-        Height = 25
-        Top = 56
+        Height = 23
+        Top = 58
         Width = 315
         Align = alTop
-        Caption = 'Day Statistics'
+        Caption = 'Active projects only'
         TabOrder = 2
-        OnClick = bt_ViewDayStatClick
+        OnChange = cb_StatActiveOnlyChange
       end
-      object bt_ViewMonthStat: TButton
+      object bt_ViewDayStat: TButton
         Left = 0
         Height = 25
         Top = 81
         Width = 315
         Align = alTop
-        Caption = 'Month Statistics'
+        Caption = 'Day Statistics'
         TabOrder = 3
+        OnClick = bt_ViewDayStatClick
+      end
+      object bt_ViewMonthStat: TButton
+        Left = 0
+        Height = 25
+        Top = 106
+        Width = 315
+        Align = alTop
+        Caption = 'Month Statistics'
+        TabOrder = 4
         OnClick = bt_ViewMonthStatClick
       end
       object ReportGrid: TStringGrid
         Left = 0
-        Height = 347
-        Top = 156
+        Height = 322
+        Top = 181
         Width = 315
         Align = alClient
         ColCount = 3
-        Color = clWindow
         DefaultColWidth = 120
         DefaultRowHeight = 25
         FixedCols = 0
-        FixedRows = 1
-        GridLineColor = clSilver
         Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goColSizing, goRowSelect, goThumbTracking]
         RowCount = 1
-        TabOrder = 5
+        TabOrder = 6
         OnKeyDown = ReportGridKeyDown
       end
       object rg_OrderBy: TRadioGroup
         Left = 0
         Height = 50
-        Top = 106
+        Top = 131
         Width = 315
         Align = alTop
         AutoFill = True
@@ -304,7 +316,7 @@ object Form_options: TForm_options
           'project'
           'duration'
         )
-        TabOrder = 4
+        TabOrder = 5
       end
       object Button1: TButton
         Left = 0
@@ -313,14 +325,15 @@ object Form_options: TForm_options
         Width = 315
         Align = alBottom
         Caption = 'Copy to Clipboard'
-        TabOrder = 6
+        TabOrder = 7
         OnClick = Button1Click
       end
     end
   end
   object PopupMenu_Projects: TPopupMenu
-    Left = 44
-    Top = 452
+    OnPopup = PopupMenu_ProjectsPopup
+    Left = 48
+    Top = 256
     object PopupMenu_Projects_Item_Start: TMenuItem
       Tag = -1
       Caption = 'Start'
@@ -330,6 +343,11 @@ object Form_options: TForm_options
       Tag = -1
       Caption = 'Delete'
       OnClick = PopupMenu_Projects_Item_DeleteClick
+    end
+    object PopupMenu_Projects_Item_ToggleActive: TMenuItem
+      Tag = -1
+      Caption = 'Make active'
+      OnClick = PopupMenu_Projects_Item_ToggleActiveClick
     end
   end
   object FontDialog: TFontDialog
@@ -389,7 +407,7 @@ object Form_options: TForm_options
       'ColorS=F0FBFF'
       'ColorT=A4A0A0'
     )
-    Left = 28
-    Top = 416
+    Left = 40
+    Top = 192
   end
 end

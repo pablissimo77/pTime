@@ -5,14 +5,17 @@
 ## Features
 
 - Create and manage a project list.
+- Mark projects as active or inactive and optionally show only active projects.
 - Start a timer for the selected project.
 - Switch between projects or use `PAUSE`.
 - Display the current project and elapsed time in a floating panel.
 - View daily and monthly statistics with project filtering.
+- Optionally limit statistics to active projects.
 - See the reporting period, project, and duration directly in the report.
 - Monthly reports are broken down by day and project.
 - Sort statistics by project name or duration.
 - Copy statistics as tab-separated text to the clipboard for pasting into Excel or another spreadsheet application.
+- Delete a project together with its time history after confirmation.
 - Configure the panel font, colors, size, and position.
 
 The application does not require an installer, the Windows registry, or a separate database server. All required files are kept next to the executable.
@@ -155,7 +158,7 @@ The main database file is `ptime.sqlite3`.
 
 The `timing` table stores the project name, date, start time, end time, and duration in seconds. The database also contains:
 
-- `projects` — the project list and display order;
+- `projects` — the project list, display order, and active/inactive state;
 - `settings` — the panel font, colors, size, and position.
 
 Project data, time records, and application settings are stored in SQLite. The application does not use or create the legacy `projects`, `option`, or date-based text log files.

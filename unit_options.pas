@@ -6,6 +6,7 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, StdCtrls, ComCtrls,
+  LCLType,
   Spin, Menus, ExtCtrls, EditBtn, Grids, Clipbrd, DateUtils, SQLDB,
   unit_database;
 
@@ -17,13 +18,14 @@ type
     btChangeColorBackground: TButton;
     btChangeFontColor: TButton;
     btChangeFont: TButton;
-    btTest: TButton;
     bt_SetDefault: TButton;
     bt_ApplySizePosition: TButton;
     bt_ViewDayStat: TButton;
     bt_ViewMonthStat: TButton;
     Button1: TButton;
     cb_StatProject: TComboBox;
+    cb_StatActiveOnly: TCheckBox;
+    cb_ProjectsActiveOnly: TCheckBox;
     ColorDialogFont: TColorDialog;
     ColorDialogBackground: TColorDialog;
     DateEdit1: TDateEdit;
@@ -42,6 +44,7 @@ type
     PanelExample: TPanel;
     PopupMenu_Projects_Item_Start: TMenuItem;
     PopupMenu_Projects_Item_Delete: TMenuItem;
+    PopupMenu_Projects_Item_ToggleActive: TMenuItem;
     NewProjectEdit: TEdit;
     PopupMenu_Projects: TPopupMenu;
     lb_Projects: TListBox;
@@ -54,7 +57,6 @@ type
     procedure btChangeColorBackgroundClick(Sender: TObject);
     procedure btChangeFontClick(Sender: TObject);
     procedure btChangeFontColorClick(Sender: TObject);
-    procedure btTestClick(Sender: TObject);
     procedure bt_ApplySizePositionClick(Sender: TObject);
     procedure bt_SetDefaultClick(Sender: TObject);
     procedure bt_ViewDayStatClick(Sender: TObject);
@@ -65,19 +67,27 @@ type
     procedure edit_InfoTopChange(Sender: TObject);
     procedure edit_InfoWidthChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
     procedure NewProjectEditChange(Sender: TObject);
 
 
     procedure NewProjectEditKeyPress(Sender: TObject; var Key: char);
 
     procedure lb_ProjectsDblClick(Sender: TObject);
+    procedure lb_ProjectsDrawItem(Control: TWinControl; Index: Integer;
+      ARect: TRect; State: TOwnerDrawState);
     procedure PageControl1Changing(Sender: TObject; var AllowChange: Boolean);
     procedure PageControl1Change(Sender: TObject);
     procedure ReportGridKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
     procedure PopupMenu_Projects_Item_DeleteClick(Sender: TObject);
     procedure PopupMenu_Projects_Item_StartClick(Sender: TObject);
+    procedure PopupMenu_Projects_Item_ToggleActiveClick(Sender: TObject);
+    procedure PopupMenu_ProjectsPopup(Sender: TObject);
+    procedure cb_ProjectsActiveOnlyChange(Sender: TObject);
+    procedure cb_StatActiveOnlyChange(Sender: TObject);
   private
+    ProjectActivity: TStringList;
     procedure LoadDayStatistics;
     procedure LoadStatisticsToGrid;
     function SelectedStatisticsProject: string;
@@ -139,6 +149,7 @@ end;
 
 procedure TForm_options.FormCreate(Sender: TObject);
 begin
+  ProjectActivity := TStringList.Create;
   LoadOptions;
   LoadProjectsList;
 
@@ -146,6 +157,36 @@ begin
 
 
   //DateTimePicker1.TimeFormat:=;
+end;
+
+procedure TForm_options.FormDestroy(Sender: TObject);
+begin
+  ProjectActivity.Free;
+end;
+
+procedure TForm_options.lb_ProjectsDrawItem(Control: TWinControl;
+  Index: Integer; ARect: TRect; State: TOwnerDrawState);
+var
+  ProjectIndex: Integer;
+begin
+  lb_Projects.Canvas.FillRect(ARect);
+  if odSelected in State then
+  begin
+    lb_Projects.Canvas.Brush.Color := clHighlight;
+    lb_Projects.Canvas.FillRect(ARect);
+  end;
+
+  ProjectIndex := ProjectActivity.IndexOf(lb_Projects.Items[Index]);
+  if (ProjectIndex >= 0) and
+    (PtrInt(ProjectActivity.Objects[ProjectIndex]) = 0) then
+    lb_Projects.Canvas.Font.Color := clGrayText
+  else if odSelected in State then
+    lb_Projects.Canvas.Font.Color := clHighlightText
+  else
+    lb_Projects.Canvas.Font.Color := clWindowText;
+
+  lb_Projects.Canvas.TextOut(ARect.Left + 2, ARect.Top + 2,
+    lb_Projects.Items[Index]);
 end;
 
 procedure TForm_options.NewProjectEditChange(Sender: TObject);
@@ -191,10 +232,6 @@ begin
 end;
 
 
-procedure TForm_options.btTestClick(Sender: TObject);
-begin
-end;
-
 procedure TForm_options.bt_ApplySizePositionClick(Sender: TObject);
 begin
   ApplyOptions;
@@ -214,6 +251,12 @@ begin
   LoadDayStatistics;
 end;
 
+procedure TForm_options.cb_StatActiveOnlyChange(Sender: TObject);
+begin
+  if Visible and (PageControl1.ActivePage = TabSheet_Stat) then
+    LoadDayStatistics;
+end;
+
 function TForm_options.SelectedStatisticsProject: string;
 begin
   if (cb_StatProject.ItemIndex <= 0) or
@@ -227,9 +270,8 @@ procedure TForm_options.LoadDayStatistics;
 begin
   try
     AppDatabase.OpenDayStatistics(DateEdit1.Text, SelectedStatisticsProject,
-      rg_OrderBy.ItemIndex <> 0);
+      rg_OrderBy.ItemIndex <> 0, cb_StatActiveOnly.Checked);
     LoadStatisticsToGrid;
-
   except
     ShowMessage('Unable to query the database');
   end;
@@ -242,7 +284,7 @@ begin
   try
     YearMonth := FormatDateTime('yyyy.mm', DateEdit1.Date);
     AppDatabase.OpenMonthStatistics(YearMonth, SelectedStatisticsProject,
-      rg_OrderBy.ItemIndex <> 0);
+      rg_OrderBy.ItemIndex <> 0, cb_StatActiveOnly.Checked);
     LoadStatisticsToGrid;
 
   except
@@ -366,7 +408,52 @@ begin
   if lb_Projects.ItemIndex < 0 then
     Exit;
   ProjectName := lb_Projects.Items[lb_Projects.ItemIndex];
+  if MessageDlg('Delete project',
+    'Delete project "' + ProjectName + '" and all of its time records?' +
+    LineEnding + LineEnding + 'This cannot be undone.',
+    mtWarning, [mbYes, mbNo], 0) <> mrYes then
+    Exit;
+  if SameText(CurrentProjectName, ProjectName) then
+    Form_info.StartProject(Project_Pause);
   AppDatabase.DeleteProject(ProjectName);
+  LoadProjectsList;
+  Form_info.CreatePopMenu;
+end;
+
+procedure TForm_options.PopupMenu_Projects_Item_ToggleActiveClick(Sender: TObject);
+var
+  ProjectName: string;
+begin
+  if lb_Projects.ItemIndex < 0 then
+    Exit;
+  ProjectName := lb_Projects.Items[lb_Projects.ItemIndex];
+  AppDatabase.SetProjectActive(ProjectName,
+    not AppDatabase.ProjectIsActive(ProjectName));
+  LoadProjectsList;
+  Form_info.CreatePopMenu;
+end;
+
+procedure TForm_options.PopupMenu_ProjectsPopup(Sender: TObject);
+var
+  ProjectName: string;
+begin
+  if lb_Projects.ItemIndex < 0 then
+  begin
+    PopupMenu_Projects_Item_ToggleActive.Enabled := False;
+    PopupMenu_Projects_Item_Delete.Enabled := False;
+    Exit;
+  end;
+  ProjectName := lb_Projects.Items[lb_Projects.ItemIndex];
+  PopupMenu_Projects_Item_ToggleActive.Enabled := True;
+  PopupMenu_Projects_Item_Delete.Enabled := True;
+  if AppDatabase.ProjectIsActive(ProjectName) then
+    PopupMenu_Projects_Item_ToggleActive.Caption := 'Make inactive'
+  else
+    PopupMenu_Projects_Item_ToggleActive.Caption := 'Make active';
+end;
+
+procedure TForm_options.cb_ProjectsActiveOnlyChange(Sender: TObject);
+begin
   LoadProjectsList;
   Form_info.CreatePopMenu;
 end;
@@ -460,15 +547,20 @@ begin
 end;
 
 procedure TForm_options.LoadProjectsList;
+var
+  AllProjects: TStringList;
 begin
+  AllProjects := TStringList.Create;
   try
     lb_Projects.Items.Clear;
-    AppDatabase.LoadProjects(lb_Projects.Items);
+    AppDatabase.LoadProjectActivity(ProjectActivity);
+    AppDatabase.LoadProjects(lb_Projects.Items, cb_ProjectsActiveOnly.Checked);
+    AppDatabase.LoadProjects(AllProjects, False);
     cb_StatProject.Items.BeginUpdate;
     try
       cb_StatProject.Items.Clear;
       cb_StatProject.Items.Add('All projects');
-      cb_StatProject.Items.AddStrings(lb_Projects.Items);
+      cb_StatProject.Items.AddStrings(AllProjects);
       cb_StatProject.ItemIndex := 0;
     finally
       cb_StatProject.Items.EndUpdate;
@@ -479,6 +571,7 @@ begin
     cb_StatProject.Items.Add('All projects');
     cb_StatProject.ItemIndex := 0;
   end;
+  AllProjects.Free;
 end;
 
 

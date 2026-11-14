@@ -178,9 +178,12 @@ procedure TForm_info.CreatePopMenu;
 var
   item: TMenuItem;
   i: integer;
+  ActiveProjects: TStringList;
 begin
 
   PopupMenu_info.Items.Clear;
+  ActiveProjects := TStringList.Create;
+  AppDatabase.LoadProjects(ActiveProjects, True);
 
   // PAUSE
   item := TMenuItem.Create(PopupMenu_info);
@@ -195,13 +198,17 @@ begin
   item.Tag := -1;
   PopupMenu_info.Items.Add(item);
 
-  for i := 0 to Form_options.lb_Projects.Items.Count - 1 do
-  begin
-    item := TMenuItem.Create(PopupMenu_info);
-    item.Caption := Form_options.lb_Projects.Items[i];
-    item.OnClick := @MenuItemInfoOnClick;
-    item.Tag := 1;
-    PopupMenu_info.Items.Add(item);
+  try
+    for i := 0 to ActiveProjects.Count - 1 do
+    begin
+      item := TMenuItem.Create(PopupMenu_info);
+      item.Caption := ActiveProjects[i];
+      item.OnClick := @MenuItemInfoOnClick;
+      item.Tag := 1;
+      PopupMenu_info.Items.Add(item);
+    end;
+  finally
+    ActiveProjects.Free;
   end;
 
   // ------

@@ -41,14 +41,17 @@ type
       StartTime, EndTime: TDateTime; Duration: Integer);
     function LoadSettings(out Settings: TAppSettings): Boolean;
     procedure SaveSettings(const Settings: TAppSettings);
-    procedure LoadProjects(AItems: TStrings);
+    procedure LoadProjects(AItems: TStrings; OnlyActive: Boolean);
+    procedure LoadProjectActivity(AItems: TStrings);
     function ProjectExists(const ProjectName: string): Boolean;
     procedure AddProject(const ProjectName: string; SortOrder: Integer);
+    function ProjectIsActive(const ProjectName: string): Boolean;
+    procedure SetProjectActive(const ProjectName: string; Active: Boolean);
     procedure DeleteProject(const ProjectName: string);
     procedure OpenDayStatistics(const Day, ProjectName: string;
-      OrderByDuration: Boolean);
+      OrderByDuration, OnlyActive: Boolean);
     procedure OpenMonthStatistics(const YearMonth, ProjectName: string;
-      OrderByDuration: Boolean);
+      OrderByDuration, OnlyActive: Boolean);
     property StatisticsQuery: TSQLQuery read FStatisticsQuery;
   end;
 
@@ -120,7 +123,24 @@ begin
       'CREATE TABLE IF NOT EXISTS "projects" (' +
       '"id" INTEGER PRIMARY KEY AUTOINCREMENT, ' +
       '"name" TEXT NOT NULL UNIQUE, ' +
-      '"sort_order" INTEGER NOT NULL DEFAULT 0);');
+      '"sort_order" INTEGER NOT NULL DEFAULT 0, ' +
+      '"active" INTEGER NOT NULL DEFAULT 1);');
+    FQuery.SQL.Text := 'PRAGMA table_info("projects")';
+    FQuery.Open;
+    while not FQuery.EOF do
+    begin
+      if SameText(FQuery.FieldByName('name').AsString, 'active') then
+        Break;
+      FQuery.Next;
+    end;
+    if FQuery.EOF then
+    begin
+      FQuery.Close;
+      FConnection.ExecuteDirect(
+        'ALTER TABLE "projects" ADD COLUMN "active" INTEGER NOT NULL DEFAULT 1');
+    end
+    else
+      FQuery.Close;
     FConnection.ExecuteDirect(
       'CREATE INDEX IF NOT EXISTS "project_name_idx" ON "projects" ("name");');
     FConnection.ExecuteDirect(
@@ -264,15 +284,33 @@ begin
   end;
 end;
 
-procedure TAppDatabase.LoadProjects(AItems: TStrings);
+procedure TAppDatabase.LoadProjects(AItems: TStrings; OnlyActive: Boolean);
 begin
   AItems.Clear;
   PrepareWrite;
-  FQuery.SQL.Text := 'SELECT name FROM projects ORDER BY sort_order, id';
+  FQuery.SQL.Text := 'SELECT name FROM projects';
+  if OnlyActive then
+    FQuery.SQL.Text := FQuery.SQL.Text + ' WHERE active=1';
+  FQuery.SQL.Text := FQuery.SQL.Text + ' ORDER BY sort_order, id';
   FQuery.Open;
   while not FQuery.EOF do
   begin
     AItems.Add(FQuery.FieldByName('name').AsString);
+    FQuery.Next;
+  end;
+  FinishRead;
+end;
+
+procedure TAppDatabase.LoadProjectActivity(AItems: TStrings);
+begin
+  AItems.Clear;
+  PrepareWrite;
+  FQuery.SQL.Text := 'SELECT name, active FROM projects ORDER BY sort_order, id';
+  FQuery.Open;
+  while not FQuery.EOF do
+  begin
+    AItems.AddObject(FQuery.FieldByName('name').AsString,
+      TObject(PtrInt(FQuery.FieldByName('active').AsInteger)));
     FQuery.Next;
   end;
   FinishRead;
@@ -293,9 +331,37 @@ begin
   PrepareWrite;
   try
     FQuery.SQL.Text :=
-      'INSERT INTO projects (name, sort_order) VALUES (:name, :sort_order)';
+      'INSERT INTO projects (name, sort_order, active) ' +
+      'VALUES (:name, :sort_order, 1)';
     FQuery.Params.ParamByName('name').AsString := ProjectName;
     FQuery.Params.ParamByName('sort_order').AsInteger := SortOrder;
+    FQuery.ExecSQL;
+    FinishWrite;
+  except
+    if FTransaction.Active then
+      FTransaction.Rollback;
+    raise;
+  end;
+end;
+
+function TAppDatabase.ProjectIsActive(const ProjectName: string): Boolean;
+begin
+  PrepareWrite;
+  FQuery.SQL.Text := 'SELECT active FROM projects WHERE name=:name LIMIT 1';
+  FQuery.Params.ParamByName('name').AsString := ProjectName;
+  FQuery.Open;
+  Result := (not FQuery.EOF) and (FQuery.FieldByName('active').AsInteger <> 0);
+  FinishRead;
+end;
+
+procedure TAppDatabase.SetProjectActive(const ProjectName: string;
+  Active: Boolean);
+begin
+  PrepareWrite;
+  try
+    FQuery.SQL.Text := 'UPDATE projects SET active=:active WHERE name=:name';
+    FQuery.Params.ParamByName('active').AsInteger := Ord(Active);
+    FQuery.Params.ParamByName('name').AsString := ProjectName;
     FQuery.ExecSQL;
     FinishWrite;
   except
@@ -309,6 +375,9 @@ procedure TAppDatabase.DeleteProject(const ProjectName: string);
 begin
   PrepareWrite;
   try
+    FQuery.SQL.Text := 'DELETE FROM timing WHERE project=:name';
+    FQuery.Params.ParamByName('name').AsString := ProjectName;
+    FQuery.ExecSQL;
     FQuery.SQL.Text := 'DELETE FROM projects WHERE name=:name';
     FQuery.Params.ParamByName('name').AsString := ProjectName;
     FQuery.ExecSQL;
@@ -321,7 +390,7 @@ begin
 end;
 
 procedure TAppDatabase.OpenDayStatistics(const Day, ProjectName: string;
-  OrderByDuration: Boolean);
+  OrderByDuration, OnlyActive: Boolean);
 begin
   if FStatisticsQuery.Active then
     FStatisticsQuery.Close;
@@ -335,6 +404,9 @@ begin
     FStatisticsQuery.SQL.Text :=
       'SELECT day AS Period, project AS Project, sum(duration) AS Duration ' +
       'FROM timing WHERE day=:day';
+  if OnlyActive then
+    FStatisticsQuery.SQL.Text := FStatisticsQuery.SQL.Text +
+      ' AND EXISTS (SELECT 1 FROM projects p WHERE p.name=timing.project AND p.active=1)';
   if ProjectName <> '' then
     FStatisticsQuery.SQL.Text := FStatisticsQuery.SQL.Text +
       ' AND project=:project_name';
@@ -353,7 +425,7 @@ begin
 end;
 
 procedure TAppDatabase.OpenMonthStatistics(const YearMonth, ProjectName: string;
-  OrderByDuration: Boolean);
+  OrderByDuration, OnlyActive: Boolean);
 begin
   if FStatisticsQuery.Active then
     FStatisticsQuery.Close;
@@ -367,6 +439,9 @@ begin
     FStatisticsQuery.SQL.Text :=
       'SELECT day AS Period, project AS Project, sum(duration) AS Duration ' +
       'FROM timing WHERE SUBSTR(day,1,7)=:year_month';
+  if OnlyActive then
+    FStatisticsQuery.SQL.Text := FStatisticsQuery.SQL.Text +
+      ' AND EXISTS (SELECT 1 FROM projects p WHERE p.name=timing.project AND p.active=1)';
   if ProjectName <> '' then
     FStatisticsQuery.SQL.Text := FStatisticsQuery.SQL.Text +
       ' AND project=:project_name';
